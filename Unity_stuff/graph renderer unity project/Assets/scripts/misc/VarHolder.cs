@@ -1,5 +1,4 @@
 using Assets.scripts.misc;
-using System.ComponentModel;
 using UnityEngine;
 
 public class VarHolder : MonoBehaviour
@@ -13,18 +12,27 @@ public class VarHolder : MonoBehaviour
     [Header("Physics")]
     [Tooltip("How strongly a node is attracted and repelled.")]
     public float PhysicsForceGeneralStrength;
-    public float ForeignNodeInteractionRange;
-    public float MinimalChildDistance;
+    public int MinimalChildDistance;
     public float ChildDistanceConnectionsEffect;
-    public float ParentWeight;
+    public float RepulsionRadius;
     public float TanhSoften;
 
-    // for player to control
-    [Tooltip("The coloring mode for the nodes:" +
-        "\nin_range - Far away nodes appear faded." +
-        "\nby_branch - Nodes inherit the color of their parent." +
-        "\nby_relation - Nodes' color will mutate over time")]
-    public ColorMode ColorMode = ColorMode.in_range;
+  // for player to control
+  [Tooltip("The coloring mode for the nodes:" +
+      "\nin_range - Nodes in physics range are red." +
+      "\nby_branch - Nodes inherit the color of their parent." +
+      "\nby_relation - Nodes' color will mutate over time")]
+
+    // 0 - none (all white)
+    // 1 - in_range (red if in physics range)
+    // 2 - is_scanned (blue if has been scanned)
+    // 3 - url_length (the shorter the URL, the greener)
+    // 4 - by_branch (mutate the color every connection, each branch has a different color)
+    // 5 - by_site (mutate the color by the hash of the domain)
+    [HideInInspector]
+    public ColorModes colorMode = ColorMode.NONE;
+    // only for by_branch colormode
+    public float ColorMutationRate = 0.42f;
     [HideInInspector]
     public float SecondsPerPhysicsUpdate;
     [Range(0.01f,1f)]
@@ -48,5 +56,11 @@ public class VarHolder : MonoBehaviour
     [HideInInspector]
     public bool IsTypingUrl;
 
-    // for later use: public float by_branch_mutaion_rate = 0.1f;
+    // to check if the player is currently paused
+    [HideInInspector]
+    public bool IsPaused;
+
+    // to check if camera mode is on
+    [HideInInspector]
+    public bool IsCameraOn;
 }

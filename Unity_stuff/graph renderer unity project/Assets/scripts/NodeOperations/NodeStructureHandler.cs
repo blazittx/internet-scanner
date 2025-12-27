@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using System;
 using System.Net;
+using TMPro;
 
 public class NodeStructureHandler : MonoBehaviour
 {
@@ -19,8 +20,9 @@ public class NodeStructureHandler : MonoBehaviour
     public GameObject node_mould_object;
     private VarHolder vars;
     public List<GameObject> connections;
-    public LineRenderer line_renderer;
-    public NodePhysicsHandler physics_handler;
+    public LineRenderer linerenderer;
+    public NodePhysicsHandler PhysicsHandler;
+    public NodeColorHandler ColorHandler;
 
     public void OnProgress(object sender, DownloadProgressChangedEventArgs e){
         var k = e.ProgressPercentage;
@@ -70,10 +72,11 @@ public class NodeStructureHandler : MonoBehaviour
 
         // get all the components refrenced at the start, so they are all organized
         vars = GameObject.Find("Main Camera").GetComponent<VarHolder>();
-        line_renderer = gameObject.GetComponent<LineRenderer>();
+        linerenderer = gameObject.GetComponent<LineRenderer>();
         node_mould_object = GameObject.Find("mould");
-        physics_handler = gameObject.GetComponent<NodePhysicsHandler>();
-    }
+        PhysicsHandler = gameObject.GetComponent<NodePhysicsHandler>();
+        ColorHandler = gameObject.GetComponent<NodeColorHandler>();
+  }
 
     // !! FIRST READ expand_node() THEN READ void update() !!
 
@@ -89,25 +92,25 @@ public class NodeStructureHandler : MonoBehaviour
                 Vector3 positionA = transform.position;
                 Vector3 positionB = connections[x].GetComponent<Transform>().position;
 
-                // thats why when we created the number of positions in the line_renderer we did it: number of connections * 2
+                // thats why when we created the number of positions in the linerenderer we did it: number of connections * 2
                 // explanation can be found here: ctrl + f "=+=+="
-                line_renderer.SetPosition(x * 2, positionA);
-                line_renderer.SetPosition(x * 2 + 1, positionB);
+                linerenderer.SetPosition(x * 2, positionA);
+                linerenderer.SetPosition(x * 2 + 1, positionB);
             }
             else
             {
                 // if something did go wrong, we want to make sure that the line is deleted right?
                 // unity is trash so there is no option to delete a specific position from a LineRenderer
                 // this i think settting both unwanted positions in the same location works
-                line_renderer.SetPosition(x * 2, new Vector3(0, 0, 0));
-                line_renderer.SetPosition(x * 2 + 1, new Vector3(0, 0, 0));
+                linerenderer.SetPosition(x * 2, new Vector3(0, 0, 0));
+                linerenderer.SetPosition(x * 2 + 1, new Vector3(0, 0, 0));
             }
         }
     }
 
     public static string userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36";
 
-    public void TaskDownload(string url){
+    public void TaskDownload(string url) {
         scanError = null;
         using WebClient webClient = new WebClient();
         webClient.Headers.Add("User-Agent", userAgent);
@@ -149,7 +152,7 @@ public class NodeStructureHandler : MonoBehaviour
     public void AttachUrls(List<string> connected_urls){
         // make sure to update the settings (so player cant spam the same node)
         expanded = true;
-        
+        ColorHandler.ColorModeRefreshFlag = -1;
         // after retrieving all of the links connected to THIS node, we do the following operations:
         foreach (string url in connected_urls)
         {
@@ -208,10 +211,10 @@ public class NodeStructureHandler : MonoBehaviour
         //               V           V
         //            child 8      child 6
         connections.RemoveAll(item => item == null);
-        line_renderer.positionCount = connections.Count * 2;
+        linerenderer.positionCount = connections.Count * 2;
 
         // tell the physics script what connections were found
-        physics_handler.connections = connections;
+        PhysicsHandler.connections = connections;
     }
 
     //[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
@@ -222,7 +225,47 @@ public class NodeStructureHandler : MonoBehaviour
         if (expanded) return;
         // Start downloading content for parsing
         scanning = true;
+
+        // We only wanna do fancy guesswork when there is no protocol on the URL and when the url is not empty
+        if (node_url != null && node_url != "" && !node_url.Contains("://"))
+        {
+
+            // Check if there are any slashes which separate the string.
+            // We can achieve this by splitting the string by "/" and extrapolating information
+            // from the resulting array.
+            //
+            // If the array is of size 1, that means the string had a traling, leading or no slash at all.
+            // If the array is if size 2 or larger then we can safely assume that there are separating slashes
+            var separations = new List<string>(node_url.Split('/'));
+
+            if (separations.Count >= 2)
+            {
+
+                string host = separations[0];
+                separations.Remove(host);
+                
+                // We now have the host (hopefully)
+                // We can look it up on the DNS to see if it's valid
+                IPHostEntry dnslookup;
+                
+                dnslookup = Dns.GetHostEntry(host);
+
+                // If there  is no adresses found then the hostname is invalid
+                if (dnslookup.AddressList.Length == 0)
+                {
+                    scanError = "Invalid hostname";
+                    return;
+                }
+                node_url = $"https://{host}/{String.Join("/", separations)}/";
+            }
+            else
+            {
+                node_url = $"https://{separations[0].Trim('/')}/";
+            }
+   
+
+        }
+        
         TaskDownload(node_url);
-    
     }
 }

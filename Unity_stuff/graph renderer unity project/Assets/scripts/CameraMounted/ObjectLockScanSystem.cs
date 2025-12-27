@@ -7,32 +7,39 @@ public class ObjectLockScanSystem : MonoBehaviour
     public float lastClickTime = 0.0f;
 
     public UiSystem ui_system;
+    public VarHolder vars;
 
     private NodeStructureHandler current_node_handler;
     private GameObject targeted_object = null;
 
     void Update()
     {
-        Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-        RaycastHit hit;
-
-        if (Physics.Raycast(ray, out hit))
+        if (!vars.IsPaused)
         {
-            targeted_object = hit.collider.gameObject;
-            ui_system.locked_on_node = true;
-            ui_system.target_node = targeted_object;
-        }
-        else
-        {
-            ui_system.locked_on_node = false;
-            targeted_object = null;
-        }
+            Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+            RaycastHit hit;
 
-        if (Input.GetMouseButtonDown(0) && Time.time > lastClickTime + clickCooldown && targeted_object != null)
-        {
-            lastClickTime = Time.time;
+            if (Physics.Raycast(ray, out hit))
+            {
+                if (hit.collider.CompareTag("node"))
+                {
+                    targeted_object = hit.collider.gameObject;
+                    ui_system.locked_on_node = true;
+                    ui_system.target_node = targeted_object;
+                }
+            }
+            else
+            {
+                ui_system.locked_on_node = false;
+                targeted_object = null;
+            }
 
-            TriggerNode(targeted_object);
+            if (Input.GetMouseButtonDown(0) && Time.time > lastClickTime + clickCooldown && targeted_object != null)
+            {
+                lastClickTime = Time.time;
+
+                TriggerNode(targeted_object);
+            }
         }
     }
 
